@@ -1,0 +1,33 @@
+typedef struct RecycleBin_Node {
+	struct RecycleBin_Node *next;
+} RecycleBin_Node;
+
+typedef struct chunk_st {
+	struct chunk_st *next;
+} Chunk;
+
+struct recycleBin_st {
+	Chunk *chunk_list;
+	RecycleBin_Node *recycle;
+	size_t node_size;
+	int chunk_pos;
+	int nodes_per_chunk;
+};
+
+static void initRecycleBin(RecycleBin *recycleBin, size_t node_size, int nodes_per_chunk)
+
+RecycleBin *newRecycleBin(size_t node_size, int nodes_per_chunk)
+
+static void destroyRecycleBinChunks(RecycleBin * recycleBin)
+
+void destroyRecycleBin(RecycleBin * recycleBin)
+
+void *allocatePointer(RecycleBin * recycle_bin)
+
+void deallocatePointer(RecycleBin * recycle_bin, void *data)
+
+RecycleBin *newRecycleBinArray(unsigned int n, size_t node_size, int nodes_per_chunk)
+
+void destroyRecycleBinArray(RecycleBin * recycleBin)
+
+RecycleBin *getRecycleBinInArray(RecycleBin *recycleBin, int position);

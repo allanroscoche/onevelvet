@@ -1,0 +1,5 @@
+
+
+void destroyRecycleBinArray(RecycleBin * recycleBin)
+
+RecycleBin *getRecycleBinInArray(RecycleBin *recycleBin, int position);
