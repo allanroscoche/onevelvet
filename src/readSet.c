@@ -92,6 +92,7 @@ ReadSet *newReadSet()
 // Reference identifiers
 //////////////////////////////////////////////////////////////////////////
 
+/*
 typedef struct referenceCoordinate_st ReferenceCoordinate;
 static Coordinate reference_coordinate_double_strand = true;
 
@@ -103,7 +104,7 @@ struct referenceCoordinate_st {
 	IDnum counter;
 	boolean positive_strand;
 }  ATTRIBUTE_PACKED;
-
+*/
 static int compareRefCoords(const void * ptrA, const void * ptrB) {
 	ReferenceCoordinate * A = (ReferenceCoordinate *) ptrA;
 	ReferenceCoordinate * B = (ReferenceCoordinate *) ptrB;
@@ -121,15 +122,16 @@ static int compareRefCoords(const void * ptrA, const void * ptrB) {
 		else return 0;
 	}
 }
-
+/*
 typedef struct referenceCoordinateTable_st ReferenceCoordinateTable;
 
 struct referenceCoordinateTable_st {
 	ReferenceCoordinate * array;
 	IDnum arrayLength;
 }  ATTRIBUTE_PACKED;
+*/
 
-static ReferenceCoordinateTable * newReferenceCoordinateTable() {
+ReferenceCoordinateTable * newReferenceCoordinateTable() {
 	ReferenceCoordinateTable * table = callocOrExit(1, ReferenceCoordinateTable);
 	table->array = NULL;
 	table->arrayLength = 0;
@@ -154,7 +156,7 @@ static void printReferenceCoordinateTableStats(ReferenceCoordinateTable * table)
 	}
 }
 
-static void destroyReferenceCoordinateTable(ReferenceCoordinateTable * table) {
+void destroyReferenceCoordinateTable(ReferenceCoordinateTable * table) {
 	IDnum index;
 
 	if (table->array) {
@@ -414,7 +416,7 @@ static void cleanupFastX(SequencesWriter *seqWriteInfo, Category cat)
 
 // Imports sequences from a raw sequence file
 // Memory space allocated within this function.
-static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex)
+void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex)
 {
 	FILE *file;
 	const int maxline = 5000;
@@ -454,7 +456,7 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 
 // Imports sequences from a zipped raw file 
 // Memory space allocated within this function.
-static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex)
+void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex)
 {
 	gzFile file;
 	const int maxline = 5000;
@@ -632,7 +634,7 @@ char const* charToType(char c)
 KSEQ_INIT(FileGZOrAuto, fileGZOrAuto_read)
 
 // Read in FastA or FastQ files in compressed or gz format
-static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
+void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	kseq_t *seq;
 	FileGZOrAuto file;
@@ -668,7 +670,7 @@ static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *fil
 	velvetLog("Done\n");
 }
 
-static void readFastXPair(int fileType, SequencesWriter *seqWriteInfo, char *filename1, char *filename2, Category cat, IDnum * sequenceIndex)
+void readFastXPair(int fileType, SequencesWriter *seqWriteInfo, char *filename1, char *filename2, Category cat, IDnum * sequenceIndex)
 {
 	kseq_t *seq1, *seq2;
 	FileGZOrAuto file1, file2;
@@ -812,7 +814,7 @@ static void readCigar(char * cigar, boolean orientation, Coordinate pos, char * 
 	}
 }
 
-static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
+void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	char line[5000];
 	unsigned long lineno;
@@ -951,7 +953,7 @@ static int readBAMint32(gzFile file)
 	return int32(buffer);
 }
 
-static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
+void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	size_t seqCapacity = 0;
 	char *seq = NULL;
@@ -1141,7 +1143,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	velvetLog("Done\n");
 }
 
-
+/*
 static void printUsage()
 {
 	puts("Usage:");
@@ -1177,8 +1179,8 @@ static void printUsage()
 	puts("Output:");
 	puts("\tdirectory/Roadmaps");
 	puts("\tdirectory/Sequences");
-	puts("\t\t[Both files are picked up by graph, so please leave them there]");
-}
+xb	puts("\t\t[Both files are picked up by graph, so please leave them there]");
+}*/
 
 // General argument parser for most functions
 // Basically a reused portion of toplevel code dumped into here
@@ -1194,7 +1196,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 	boolean separate_pair_files = false;
 
 	if (argc < 2) {
-		printUsage();
+	  //printUsage();
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -1300,7 +1302,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				separate_pair_files = true;
 			}
 			else {
-				velvetLog("Unknown option: %s\n",
+				velvetLog("velveth: Unknown option: %s\n",
 				       argv[argIndex]);
 #ifdef DEBUG 
 				abort();

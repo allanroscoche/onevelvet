@@ -33,6 +33,18 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "run.h"
 #include "binarySequences.h"
 #include "globals.h"
+#include "readSet.h"
+
+
+#define FASTQ 1
+#define FASTA 2
+#define FASTA_GZ 5
+#define FASTQ_GZ 6
+#define SAM 8
+#define BAM 9
+#define RAW 10
+#define RAW_GZ 11
+#define AUTO 12
 
 
 static void printUsage()
@@ -97,6 +109,7 @@ static void printUsage()
 	puts("\t\t[Both files are picked up by graph, so please leave them there]");
 }
 
+
 int main(int argc, char **argv)
 {
 	ReadSet *allSequences = NULL;
@@ -108,6 +121,60 @@ int main(int argc, char **argv)
 	boolean noHash = false;
 	boolean multiple_kmers = false;
 	DIR *dir;
+
+	//int argIndex = 1;
+	int filetype = FASTA;
+	Category cat = 0;
+	IDnum sequenceIndex = 1;
+	short short_var;
+	ReferenceCoordinateTable * refCoords = newReferenceCoordinateTable();
+	boolean reuseSequences = false;
+	boolean separate_pair_files = false;
+
+
+	
+	ReadSet *sequences = NULL;
+	RoadMapArray *rdmaps;
+	PreGraph *preGraph;
+	Graph *graph;
+	char *graphFilename, *connectedGraphFilename,
+	    *preGraphFilename, *roadmapFilename,
+	    *lowCovContigsFilename, *highCovContigsFilename;
+	double coverageCutoff = -1;
+	double longCoverageCutoff = -1;
+	double maxCoverageCutoff = -1;
+	double expectedCoverage = -1;
+	Coordinate minContigLength = -1;
+	Coordinate minContigKmerLength;
+	boolean *dubious = NULL;
+	Coordinate insertLength[CATEGORIES];
+	Coordinate insertLengthLong = -1;
+	Coordinate std_dev[CATEGORIES];
+	Coordinate std_dev_long = -1;
+	short int accelerationBits = 24;
+	boolean readTracking = false;
+	boolean exportAssembly = false;
+	boolean unusedReads = false;
+	boolean estimateCoverage = false;
+	boolean estimateCutoff = false;
+	boolean exportAlignments = false;
+	FILE *file;
+	int arg_index, arg_int;
+	double arg_double;
+	char *arg;
+	ShortLength *sequenceLengths = NULL;
+	//Category cat;
+	boolean scaffolding = true;
+	int pebbleRounds = 1;
+	long long longlong_var;
+	//short int short_var;
+	boolean exportFilteredNodes = false;
+	int clean = 0;
+	boolean conserveLong = false;
+	boolean shadows[CATEGORIES];
+	int coverageMask = 1;
+	SequencesReader *seqReadInfo = NULL;
+
 
 	setProgramName("onevelvet");
 
@@ -261,7 +328,181 @@ int main(int argc, char **argv)
 		strcat(seqFilename, baseSeqName);
 
 		if ( h == hashLength ) {
-			parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand, &noHash);
+		  //parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand, &noHash);
+	
+	if (argc < 2) {
+		printUsage();
+#ifdef DEBUG 
+		abort();
+#endif 
+		exit(1);
+	}
+
+	for (argIndex = 1; argIndex < argc; argIndex++) {
+		if (strcmp(argv[argIndex], "-strand_specific") == 0) {
+			double_strand = false;
+			reference_coordinate_double_strand = false;
+		} else if (strcmp(argv[argIndex], "-reuse_Sequences") == 0) {
+			reuseSequences = true;
+		} else if (strcmp(argv[argIndex], "-noHash") == 0) {
+			noHash = true;
+		}
+	}
+
+	//if (reuseSequences) 
+	//	return;
+
+	SequencesWriter * seqWriteInfo = NULL;
+	if (isCreateBinary()) {
+		seqWriteInfo = openCnySeqForWrite(filename);
+		seqWriteInfo->m_unifiedSeqFileHeader.m_bDoubleStrand = double_strand;
+		// file is already open
+	} else {
+		seqWriteInfo = callocOrExit(1, SequencesWriter);
+		seqWriteInfo->m_pFile = fopen(filename, "w");
+	}
+	int argIndex_t;
+	for (argIndex_t = 1; argIndex_t < argc; argIndex_t++) {
+		if (argv[argIndex_t][0] == '-' && strlen(argv[argIndex_t]) > 1) {
+
+			if (strcmp(argv[argIndex_t], "-fastq") == 0)
+				filetype = FASTQ;
+			else if (strcmp(argv[argIndex_t], "-fasta") == 0)
+				filetype = FASTA;
+			else if (strcmp(argv[argIndex_t], "-fastq.gz") == 0)
+				filetype = FASTQ_GZ;
+			else if (strcmp(argv[argIndex_t], "-fasta.gz") == 0)
+				filetype = FASTA_GZ;
+			else if (strcmp(argv[argIndex_t], "-sam") == 0)
+				filetype = SAM;
+			else if (strcmp(argv[argIndex_t], "-bam") == 0)
+				filetype = BAM;
+			else if (strcmp(argv[argIndex_t], "-raw") == 0)
+				filetype = RAW;
+			else if (strcmp(argv[argIndex_t], "-raw.gz") == 0)
+				filetype = RAW_GZ;
+			else if (strcmp(argv[argIndex_t], "-fmtAuto") == 0)
+				filetype = AUTO;
+			else if (strcmp(argv[argIndex_t], "-short") == 0)
+				cat = 0;
+			else if (strcmp(argv[argIndex_t], "-shortPaired") ==
+				 0)
+				cat = 1;
+			else if (strncmp
+				 (argv[argIndex_t], "-shortPaired",
+				  12) == 0) {
+				sscanf(argv[argIndex_t], "-shortPaired%hd", &short_var);
+				cat = (Category) short_var;
+				if (cat < 1 || cat > CATEGORIES) {
+					velvetLog("Unknown option: %s\n",
+					       argv[argIndex_t]);
+#ifdef DEBUG 
+					abort();
+#endif 
+					exit(1);
+				}
+				cat--;
+				cat *= 2;
+				cat++;
+			} else if (strncmp(argv[argIndex_t], "-short", 6) ==
+				   0) {
+				sscanf(argv[argIndex_t], "-short%hd", &short_var);
+				cat = (Category) short_var;
+				if (cat < 1 || cat > CATEGORIES) {
+					velvetLog("Unknown option: %s\n",
+					       argv[argIndex_t]);
+#ifdef DEBUG 
+					abort();
+#endif 
+					exit(1);
+				}
+				cat--;
+				cat *= 2;
+			} else if (strcmp(argv[argIndex_t], "-long") == 0)
+				cat = LONG;		// CATEGORIES * 2;
+			else if (strcmp(argv[argIndex_t], "-longPaired") == 0)
+				cat = LONG_PAIRED;	// CATEGORIES * 2 + 1;
+			else if (strcmp(argv[argIndex_t], "-reference") == 0)
+				cat = REFERENCE;	// CATEGORIES * 2 + 2
+			else if (strcmp(argv[argIndex_t], "-strand_specific") == 0) {
+				double_strand = false;
+				reference_coordinate_double_strand = false;
+			} else if (strcmp(argv[argIndex_t], "-noHash") == 0) {
+				;
+			} else if (strcmp(argv[argIndex_t], "-create_binary") == 0) {
+				;
+			} else if (strcmp(argv[argIndex_t], "-interleaved") == 0) {
+				separate_pair_files = false;
+			} else if (strcmp(argv[argIndex_t], "-separate") == 0) {
+				separate_pair_files = true;
+			}
+			else {
+				velvetLog("velveth: Unknown option: %s\n",
+				       argv[argIndex_t]);
+#ifdef DEBUG 
+				abort();
+#endif 
+				exit(1);
+			}
+
+			continue;
+		}
+
+		if (cat == -1)
+			continue;
+
+		switch (filetype) {
+		case FASTA:
+		case FASTQ:
+		case FASTA_GZ:
+		case FASTQ_GZ:
+		case AUTO:
+			// Separate files for paired reads?  Note odd categories used for paired read type
+			if (separate_pair_files && cat%2==1) {
+				argIndex_t++;
+				if (argIndex_t>=argc)
+					exitErrorf(EXIT_FAILURE, false, "Require left & right filename for -separate mode");
+				readFastXPair(filetype, seqWriteInfo, argv[argIndex_t-1], argv[argIndex_t], cat, &sequenceIndex);
+			} else {
+				readFastXFile(filetype, seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex, refCoords);
+			}
+			break;
+		case RAW:
+			if (separate_pair_files && cat%2==1) {
+                        	exitErrorf(EXIT_FAILURE, false, "Currently do not support -separate mode for RAW");
+                        }
+			readRawFile(seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex);
+			break;
+		case RAW_GZ:
+			if (separate_pair_files && cat%2==1) {
+                        	exitErrorf(EXIT_FAILURE, false, "Currently do not support -separate mode for RAW");
+                        }
+			readRawGZFile(seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex);
+			break;
+		case SAM:
+			readSAMFile(seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex, refCoords);
+			break;
+		case BAM:
+			readBAMFile(seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex, refCoords);
+			break;
+		default:
+			velvetLog("Screw up in parser... exiting\n");
+#ifdef DEBUG 
+			abort();
+#endif 
+			exit(1);
+		}
+	}
+
+	destroyReferenceCoordinateTable(refCoords);
+	if (isCreateBinary()) {
+		closeCnySeqForWrite(seqWriteInfo);
+	} else {
+		fclose(seqWriteInfo->m_pFile);
+}
+	if (seqWriteInfo) {
+	    free(seqWriteInfo);
+	}
 		} else {
 			sprintf(buf,"rm -f %s",seqFilename);
 			if (system(buf)) {
@@ -316,47 +557,11 @@ int main(int argc, char **argv)
 		}
 	}
 
-	ReadSet *sequences = NULL;
-	RoadMapArray *rdmaps;
-	PreGraph *preGraph;
-	Graph *graph;
-	char *graphFilename, *connectedGraphFilename,
-	    *preGraphFilename, *roadmapFilename,
-	    *lowCovContigsFilename, *highCovContigsFilename;
-	double coverageCutoff = -1;
-	double longCoverageCutoff = -1;
-	double maxCoverageCutoff = -1;
-	double expectedCoverage = -1;
-	Coordinate minContigLength = -1;
-	Coordinate minContigKmerLength;
-	boolean *dubious = NULL;
-	Coordinate insertLength[CATEGORIES];
-	Coordinate insertLengthLong = -1;
-	Coordinate std_dev[CATEGORIES];
-	Coordinate std_dev_long = -1;
-	short int accelerationBits = 24;
-	boolean readTracking = false;
-	boolean exportAssembly = false;
-	boolean unusedReads = false;
-	boolean estimateCoverage = false;
-	boolean estimateCutoff = false;
-	boolean exportAlignments = false;
-	FILE *file;
-	int arg_index, arg_int;
-	double arg_double;
-	char *arg;
-	ShortLength *sequenceLengths = NULL;
-	Category cat;
-	boolean scaffolding = true;
-	int pebbleRounds = 1;
-	long long longlong_var;
-	short int short_var;
-	boolean exportFilteredNodes = false;
-	int clean = 0;
-	boolean conserveLong = false;
-	boolean shadows[CATEGORIES];
-	int coverageMask = 1;
-	SequencesReader *seqReadInfo = NULL;
+
+	/* --------------------------------------
+	 *             velvetg
+	 *  ------------------------------------*/
+	 
 
 
 	for (cat = 0; cat < CATEGORIES; cat++) {
@@ -397,11 +602,12 @@ int main(int argc, char **argv)
 	highCovContigsFilename = mallocOrExit(strlen(directory) + 100, char);
 	
 	// Argument parsing
-	for (arg_index = 2; arg_index < argc; arg_index++) {
+	for (arg_index = 4; arg_index < argc; arg_index++) {
 		arg = argv[arg_index++];
 		if (arg_index >= argc) {
 			velvetLog("Unusual number of arguments!\n");
-			printUsage();
+			//printUsage();
+			printf("velvetg error\n");
 #ifdef DEBUG 
 			abort();
 #endif 
@@ -578,8 +784,8 @@ int main(int argc, char **argv)
 			printUsage();
 			return 0;
 		} else {
-			velvetLog("Unknown option: %s;\n", arg);
-			printUsage();
+			velvetLog("velveth: Unknown option: %s;\n", arg);
+			//printUsage();
 			return 1;
 		}
 	}

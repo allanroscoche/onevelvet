@@ -21,6 +21,15 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _READSET_H_
 #define _READSET_H_
 
+#include "globals.h"
+#include "tightString.h"
+#include "readSet.h"
+#include "utility.h"
+#include "binarySequences.h"
+#include "autoOpen.h"
+#include "kseq.h"
+
+
 struct readSet_st {
 	char **sequences;
 	TightString *tSequences;
@@ -63,5 +72,37 @@ void destroyReadSet(ReadSet * reads);
 
 inline boolean isCreateBinary();
 void setCreateBinary(boolean val);
+
+
+
+typedef struct referenceCoordinate_st ReferenceCoordinate;
+static Coordinate reference_coordinate_double_strand = true;
+
+struct referenceCoordinate_st {
+	char * name;
+	Coordinate start;
+	Coordinate finish;
+	IDnum referenceID;
+	IDnum counter;
+	boolean positive_strand;
+}  ATTRIBUTE_PACKED;
+
+
+typedef struct referenceCoordinateTable_st ReferenceCoordinateTable;
+
+struct referenceCoordinateTable_st {
+	ReferenceCoordinate * array;
+	IDnum arrayLength;
+}  ATTRIBUTE_PACKED;
+
+
+ReferenceCoordinateTable * newReferenceCoordinateTable();
+void destroyReferenceCoordinateTable(ReferenceCoordinateTable * table);
+void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords);
+void readFastXPair(int fileType, SequencesWriter *seqWriteInfo, char *filename1, char *filename2, Category cat, IDnum * sequenceIndex);
+void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords);
+void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords);
+void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex);
+void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex);
 
 #endif
