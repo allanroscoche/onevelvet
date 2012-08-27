@@ -330,21 +330,23 @@ int main(int argc, char **argv)
 		if ( h == hashLength ) {
 		  //parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand, &noHash);
 	
-	if (argc < 2) {
+	if (argc < 4) {
 		printUsage();
 #ifdef DEBUG 
 		abort();
 #endif 
 		exit(1);
 	}
-
-	for (argIndex = 1; argIndex < argc; argIndex++) {
-		if (strcmp(argv[argIndex], "-strand_specific") == 0) {
+	char * filename_t = seqFilename;
+	char ** argv_t = &(argv[2]);
+	int argc_t = argc -2 ;
+	for (argIndex = 1; argIndex < argc_t; argIndex++) {
+		if (strcmp(argv_t[argIndex], "-strand_specific") == 0) {
 			double_strand = false;
 			reference_coordinate_double_strand = false;
-		} else if (strcmp(argv[argIndex], "-reuse_Sequences") == 0) {
+		} else if (strcmp(argv_t[argIndex], "-reuse_Sequences") == 0) {
 			reuseSequences = true;
-		} else if (strcmp(argv[argIndex], "-noHash") == 0) {
+		} else if (strcmp(argv_t[argIndex], "-noHash") == 0) {
 			noHash = true;
 		}
 	}
@@ -354,48 +356,48 @@ int main(int argc, char **argv)
 
 	SequencesWriter * seqWriteInfo = NULL;
 	if (isCreateBinary()) {
-		seqWriteInfo = openCnySeqForWrite(filename);
+		seqWriteInfo = openCnySeqForWrite(filename_t);
 		seqWriteInfo->m_unifiedSeqFileHeader.m_bDoubleStrand = double_strand;
 		// file is already open
 	} else {
 		seqWriteInfo = callocOrExit(1, SequencesWriter);
-		seqWriteInfo->m_pFile = fopen(filename, "w");
+		seqWriteInfo->m_pFile = fopen(filename_t, "w");
 	}
 	int argIndex_t;
-	for (argIndex_t = 1; argIndex_t < argc; argIndex_t++) {
-		if (argv[argIndex_t][0] == '-' && strlen(argv[argIndex_t]) > 1) {
+	for (argIndex_t = 1; argIndex_t < argc_t; argIndex_t++) {
+		if (argv_t[argIndex_t][0] == '-' && strlen(argv_t[argIndex_t]) > 1) {
 
-			if (strcmp(argv[argIndex_t], "-fastq") == 0)
+			if (strcmp(argv_t[argIndex_t], "-fastq") == 0)
 				filetype = FASTQ;
-			else if (strcmp(argv[argIndex_t], "-fasta") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-fasta") == 0)
 				filetype = FASTA;
-			else if (strcmp(argv[argIndex_t], "-fastq.gz") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-fastq.gz") == 0)
 				filetype = FASTQ_GZ;
-			else if (strcmp(argv[argIndex_t], "-fasta.gz") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-fasta.gz") == 0)
 				filetype = FASTA_GZ;
-			else if (strcmp(argv[argIndex_t], "-sam") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-sam") == 0)
 				filetype = SAM;
-			else if (strcmp(argv[argIndex_t], "-bam") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-bam") == 0)
 				filetype = BAM;
-			else if (strcmp(argv[argIndex_t], "-raw") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-raw") == 0)
 				filetype = RAW;
-			else if (strcmp(argv[argIndex_t], "-raw.gz") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-raw.gz") == 0)
 				filetype = RAW_GZ;
-			else if (strcmp(argv[argIndex_t], "-fmtAuto") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-fmtAuto") == 0)
 				filetype = AUTO;
-			else if (strcmp(argv[argIndex_t], "-short") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-short") == 0)
 				cat = 0;
-			else if (strcmp(argv[argIndex_t], "-shortPaired") ==
+			else if (strcmp(argv_t[argIndex_t], "-shortPaired") ==
 				 0)
 				cat = 1;
 			else if (strncmp
-				 (argv[argIndex_t], "-shortPaired",
+				 (argv_t[argIndex_t], "-shortPaired",
 				  12) == 0) {
-				sscanf(argv[argIndex_t], "-shortPaired%hd", &short_var);
+				sscanf(argv_t[argIndex_t], "-shortPaired%hd", &short_var);
 				cat = (Category) short_var;
 				if (cat < 1 || cat > CATEGORIES) {
 					velvetLog("Unknown option: %s\n",
-					       argv[argIndex_t]);
+					       argv_t[argIndex_t]);
 #ifdef DEBUG 
 					abort();
 #endif 
@@ -404,13 +406,13 @@ int main(int argc, char **argv)
 				cat--;
 				cat *= 2;
 				cat++;
-			} else if (strncmp(argv[argIndex_t], "-short", 6) ==
+			} else if (strncmp(argv_t[argIndex_t], "-short", 6) ==
 				   0) {
-				sscanf(argv[argIndex_t], "-short%hd", &short_var);
+				sscanf(argv_t[argIndex_t], "-short%hd", &short_var);
 				cat = (Category) short_var;
 				if (cat < 1 || cat > CATEGORIES) {
 					velvetLog("Unknown option: %s\n",
-					       argv[argIndex_t]);
+					       argv_t[argIndex_t]);
 #ifdef DEBUG 
 					abort();
 #endif 
@@ -418,27 +420,27 @@ int main(int argc, char **argv)
 				}
 				cat--;
 				cat *= 2;
-			} else if (strcmp(argv[argIndex_t], "-long") == 0)
+			} else if (strcmp(argv_t[argIndex_t], "-long") == 0)
 				cat = LONG;		// CATEGORIES * 2;
-			else if (strcmp(argv[argIndex_t], "-longPaired") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-longPaired") == 0)
 				cat = LONG_PAIRED;	// CATEGORIES * 2 + 1;
-			else if (strcmp(argv[argIndex_t], "-reference") == 0)
+			else if (strcmp(argv_t[argIndex_t], "-reference") == 0)
 				cat = REFERENCE;	// CATEGORIES * 2 + 2
-			else if (strcmp(argv[argIndex_t], "-strand_specific") == 0) {
+			else if (strcmp(argv_t[argIndex_t], "-strand_specific") == 0) {
 				double_strand = false;
 				reference_coordinate_double_strand = false;
-			} else if (strcmp(argv[argIndex_t], "-noHash") == 0) {
+			} else if (strcmp(argv_t[argIndex_t], "-noHash") == 0) {
 				;
-			} else if (strcmp(argv[argIndex_t], "-create_binary") == 0) {
+			} else if (strcmp(argv_t[argIndex_t], "-create_binary") == 0) {
 				;
-			} else if (strcmp(argv[argIndex_t], "-interleaved") == 0) {
+			} else if (strcmp(argv_t[argIndex_t], "-interleaved") == 0) {
 				separate_pair_files = false;
-			} else if (strcmp(argv[argIndex_t], "-separate") == 0) {
+			} else if (strcmp(argv_t[argIndex_t], "-separate") == 0) {
 				separate_pair_files = true;
 			}
 			else {
 				velvetLog("velveth: Unknown option: %s\n",
-				       argv[argIndex_t]);
+				       argv_t[argIndex_t]);
 #ifdef DEBUG 
 				abort();
 #endif 
@@ -451,6 +453,7 @@ int main(int argc, char **argv)
 		if (cat == -1)
 			continue;
 
+		
 		switch (filetype) {
 		case FASTA:
 		case FASTQ:
@@ -458,32 +461,33 @@ int main(int argc, char **argv)
 		case FASTQ_GZ:
 		case AUTO:
 			// Separate files for paired reads?  Note odd categories used for paired read type
+			
 			if (separate_pair_files && cat%2==1) {
-				argIndex_t++;
-				if (argIndex_t>=argc)
-					exitErrorf(EXIT_FAILURE, false, "Require left & right filename for -separate mode");
-				readFastXPair(filetype, seqWriteInfo, argv[argIndex_t-1], argv[argIndex_t], cat, &sequenceIndex);
+			  argIndex_t++;
+			  if (argIndex_t>=argc_t)
+			    exitErrorf(EXIT_FAILURE, false, "Require left & right filename for -separate mode");
+			  readFastXPair(filetype, seqWriteInfo, argv_t[argIndex_t-1], argv_t[argIndex_t], cat, &sequenceIndex);
 			} else {
-				readFastXFile(filetype, seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex, refCoords);
+			  readFastXFile(filetype, seqWriteInfo, argv_t[argIndex_t], cat, &sequenceIndex, refCoords);
 			}
 			break;
 		case RAW:
 			if (separate_pair_files && cat%2==1) {
                         	exitErrorf(EXIT_FAILURE, false, "Currently do not support -separate mode for RAW");
                         }
-			readRawFile(seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex);
+			readRawFile(seqWriteInfo, argv_t[argIndex_t], cat, &sequenceIndex);
 			break;
 		case RAW_GZ:
 			if (separate_pair_files && cat%2==1) {
                         	exitErrorf(EXIT_FAILURE, false, "Currently do not support -separate mode for RAW");
                         }
-			readRawGZFile(seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex);
+			readRawGZFile(seqWriteInfo, argv_t[argIndex_t], cat, &sequenceIndex);
 			break;
 		case SAM:
-			readSAMFile(seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex, refCoords);
+			readSAMFile(seqWriteInfo, argv_t[argIndex_t], cat, &sequenceIndex, refCoords);
 			break;
 		case BAM:
-			readBAMFile(seqWriteInfo, argv[argIndex_t], cat, &sequenceIndex, refCoords);
+			readBAMFile(seqWriteInfo, argv_t[argIndex_t], cat, &sequenceIndex, refCoords);
 			break;
 		default:
 			velvetLog("Screw up in parser... exiting\n");
@@ -492,8 +496,8 @@ int main(int argc, char **argv)
 #endif 
 			exit(1);
 		}
-	}
 
+	}
 	destroyReferenceCoordinateTable(refCoords);
 	if (isCreateBinary()) {
 		closeCnySeqForWrite(seqWriteInfo);
@@ -526,6 +530,8 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 		}
+		velvetLog("Até aqui!!!\n");
+
 
 		if (noHash)
 			continue;
@@ -557,7 +563,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-
+	
 	/* --------------------------------------
 	 *             velvetg
 	 *  ------------------------------------*/
@@ -783,11 +789,33 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "--help") == 0) {
 			printUsage();
 			return 0;
-		} else {
-			velvetLog("velveth: Unknown option: %s;\n", arg);
-			//printUsage();
-			return 1;
 		}
+		if ((strcmp(argv[argIndex], "-fastq") == 0) ||
+		    (strcmp(argv[argIndex], "-fasta") == 0) ||
+		    (strcmp(argv[argIndex], "-fastq.gz") == 0) ||
+		    (strcmp(argv[argIndex], "-fasta.gz") == 0) ||
+		    (strcmp(argv[argIndex], "-sam") == 0) ||
+		    (strcmp(argv[argIndex], "-bam") == 0) ||
+		    (strcmp(argv[argIndex], "-raw") == 0) ||
+		    (strcmp(argv[argIndex], "-raw.gz") == 0) ||
+		    (strcmp(argv[argIndex], "-fmtAuto") == 0) ||
+		    (strcmp(argv[argIndex], "-short") == 0) ||
+		    (strcmp(argv[argIndex], "-shortPaired") == 0) ||
+		    (strncmp(argv[argIndex], "-short", 6) ==  0) ||
+		    (strcmp(argv[argIndex], "-long") == 0) ||
+		    (strcmp(argv[argIndex], "-longPaired") == 0) ||
+		    (strcmp(argv[argIndex], "-reference") == 0) ||
+		    (strcmp(argv[argIndex], "-strand_specific") == 0) ||
+		    (strcmp(argv[argIndex], "-noHash") == 0) ||
+		    (strcmp(argv[argIndex], "-create_binary") == 0) ||
+		    (strcmp(argv[argIndex], "-interleaved") == 0) ||
+		    (strcmp(argv[argIndex], "-separate") == 0) ){
+		      ;
+		    } else {
+		    velvetLog("velvetg: Unknown option: %s;\n", arg);
+		    //printUsage();
+			return 1;
+		  }
 	}
 	
 	// Bookkeeping
